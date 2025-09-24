@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Energia Livre - SaaS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <!-- Main container for the app -->
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden max-w-2xl w-full p-8">
+        <!-- Loading state for Firebase initialization -->
+        <div id="loading" class="text-center p-8">
+            <h2 class="text-xl font-semibold text-gray-700">Carregando a aplicação...</h2>
+        </div>
+
+        <!-- Main content area, hidden until Firebase is ready -->
+        <div id="app-content" class="hidden">
+            <div class="text-center mb-6">
+                <h1 id="main-title" class="text-3xl font-bold text-gray-800 mb-2">Plataforma de Energia Livre</h1>
+                <p id="main-subtitle" class="text-gray-600">Selecione sua persona abaixo.</p>
+                <p class="text-xs text-gray-500 mt-2">ID do Usuário: <span id="user-id" class="font-mono">...</span></p>
+                <p id="user-role" class="text-xs text-gray-500 mt-1">Perfil: <span id="role-display" class="font-bold">...</span></p>
+            </div>
+
+            <!-- Role selector buttons -->
+            <div id="role-selector" class="flex justify-center space-x-4 mb-8">
+                <button id="show-user-view" class="px-6 py-2 rounded-full border border-gray-300 text-sm font-medium hover:bg-gray-100 transition">
+                    Sou um Usuário
+                </button>
+                <button id="show-comercializadora-view" class="px-6 py-2 rounded-full border border-gray-300 text-sm font-medium hover:bg-gray-100 transition">
+                    Sou uma Comercializadora
+                </button>
+                <button id="show-admin-view" class="px-6 py-2 rounded-full border border-gray-300 text-sm font-medium hover:bg-gray-100 transition">
+                    Sou um Administrador
+                </button>
+            </div>
+
+            <!-- User (Client) View - Formulário de Intenção de Compra -->
+            <div id="user-view" class="hidden space-y-6">
+                <div class="text-center">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Crie sua Intenção de Compra</h2>
+                </div>
+                <form id="purchase-intent-form">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                        <input type="text" id="name" name="name" placeholder="Seu nome" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
+                        <input type="email" id="email" name="email" placeholder="seu-email@exemplo.com" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                    </div>
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700">Telefone</label>
+                        <input type="tel" id="phone" name="phone" placeholder="(99) 99999-9090" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                    </div>
+                    <div>
+                        <label for="bill-value" class="block text-sm font-medium text-gray-700">Valor da sua última conta de luz (R$)</label>
+                        <select id="bill-value" name="bill-value" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                            <option value="" disabled selected>Selecione uma faixa de valor</option>
+                            <option value="below-5000">Abaixo de R$ 5.000</option>
+                            <option value="5000-8000">De R$ 5.000 a R$ 8.000</option>
+                            <option value="above-8000">Acima de R$ 8.000</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="terms-consent" name="terms-consent" type="checkbox" required
+                            class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="terms-consent" class="ml-2 block text-sm text-gray-900">
+                            Eu concordo com os <a href="#" class="text-blue-600 hover:text-blue-500">Termos e Condições</a> e a Política de Privacidade.
+                        </label>
+                    </div>
+                    <div>
+                        <button type="submit"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                            Enviar Intenção de Compra
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Comercializadora View - Visualização das Intenções de Compra -->
+            <div id="comercializadora-view" class="hidden">
+                <div class="text-center">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Intenções de Compra Recebidas</h2>
+                </div>
+                <div id="intents-list" class="space-y-4">
+                    <!-- Dynamic content will be injected here by JavaScript -->
+                    <p id="no-intents-message" class="text-center text-gray-500">Nenhuma intenção de compra registrada ainda.</p>
+                </div>
+            </div>
+
+            <!-- Admin View - Formulário de Cadastro de Comercializadora -->
+            <div id="admin-view" class="hidden space-y-6">
+                <div class="text-center">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Cadastrar Nova Comercializadora</h2>
+                </div>
+                <form id="comercializadora-register-form">
+                    <div>
+                        <label for="company-name" class="block text-sm font-medium text-gray-700">Nome da Empresa</label>
+                        <input type="text" id="company-name" name="company-name" placeholder="Nome da Comercializadora" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                    </div>
+                    <div>
+                        <label for="company-email" class="block text-sm font-medium text-gray-700">E-mail de Contato</label>
+                        <input type="email" id="company-email" name="company-email" placeholder="contato@comercializadora.com" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                    </div>
+                    <div>
+                        <label for="company-cnpj" class="block text-sm font-medium text-gray-700">CNPJ</label>
+                        <input type="text" id="company-cnpj" name="company-cnpj" placeholder="00.000.000/0001-00" required
+                            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out">
+                    </div>
+                    <div>
+                        <button type="submit"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                            Cadastrar Comercializadora
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Message Box para substituição do alert() -->
+        <div id="message-box" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full border border-gray-200">
+                <h3 id="message-title" class="text-xl font-bold mb-2"></h3>
+                <p id="message-text" class="text-gray-700 mb-4"></p>
+                <div class="flex justify-end">
+                    <button id="close-message-box" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-150">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase-specific global variables
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- Firebase Initialization and Authentication ---
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        // Ative o nível de log para debug no console
+        setLogLevel('debug');
+
+        let userId = null;
+        let isAuthReady = false;
+        let userRole = 'user'; // Default role
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                // Check if user has a role assigned
+                await getRole(userId);
+            } else {
+                try {
+                    await signInAnonymously(auth);
+                } catch (error) {
+                    console.error("Erro ao fazer login anônimo:", error);
+                }
+            }
+            document.getElementById('user-id').textContent = userId;
+            isAuthReady = true;
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            
+            // Initial view based on the role
+            updateRoleDisplay();
+            switchView(userRole);
+            
+            listenForIntents();
+        });
+
+        // Use the custom token if available
+        if (initialAuthToken) {
+            signInWithCustomToken(auth, initialAuthToken).catch((error) => {
+                console.error("Erro ao fazer login com token customizado:", error);
+                signInAnonymously(auth).catch((anonError) => console.error("Erro ao fazer login anônimo:", anonError));
+            });
+        }
+        
+        // --- UI Element References ---
+        const purchaseIntentForm = document.getElementById('purchase-intent-form');
+        const comercializadoraRegisterForm = document.getElementById('comercializadora-register-form');
+        const messageBox = document.getElementById('message-box');
+        const messageTitle = document.getElementById('message-title');
+        const messageText = document.getElementById('message-text');
+        const closeMessageBox = document.getElementById('close-message-box');
+        const intentsList = document.getElementById('intents-list');
+        const noIntentsMessage = document.getElementById('no-intents-message');
+
+        const userView = document.getElementById('user-view');
+        const comercializadoraView = document.getElementById('comercializadora-view');
+        const adminView = document.getElementById('admin-view');
+        const showUserButton = document.getElementById('show-user-view');
+        const showComercializadoraButton = document.getElementById('show-comercializadora-view');
+        const showAdminButton = document.getElementById('show-admin-view');
+
+        // --- Role & View Switching Logic ---
+        async function getRole(id) {
+            const roleDocRef = doc(db, `artifacts/${appId}/users/${id}/roles`, 'role');
+            const roleDocSnap = await getDoc(roleDocRef);
+            if (roleDocSnap.exists()) {
+                userRole = roleDocSnap.data().role;
+            } else {
+                // If no role is set, default to 'user'
+                userRole = 'user';
+            }
+            updateRoleDisplay();
+        }
+
+        function updateRoleDisplay() {
+            document.getElementById('role-display').textContent = userRole.toUpperCase();
+        }
+
+        function switchView(view) {
+            userView.classList.add('hidden');
+            comercializadoraView.classList.add('hidden');
+            adminView.classList.add('hidden');
+            document.getElementById('main-title').textContent = 'Plataforma de Energia Livre';
+            document.getElementById('main-subtitle').textContent = '';
+
+            if (view === 'user') {
+                userView.classList.remove('hidden');
+                document.getElementById('main-subtitle').textContent = 'Encontre a melhor oferta para suas necessidades com agilidade.';
+            } else if (view === 'comercializadora') {
+                comercializadoraView.classList.remove('hidden');
+                document.getElementById('main-subtitle').textContent = 'Visualize e gerencie as intenções de compra.';
+            } else if (view === 'admin') {
+                adminView.classList.remove('hidden');
+                document.getElementById('main-subtitle').textContent = 'Gerenciamento de usuários e comercializadoras.';
+            } else {
+                // Fallback to user view
+                userView.classList.remove('hidden');
+            }
+        }
+
+        showUserButton.addEventListener('click', () => switchView('user'));
+        showComercializadoraButton.addEventListener('click', () => switchView('comercializadora'));
+        showAdminButton.addEventListener('click', () => switchView('admin'));
+
+        // --- Form Submission Logic (User/Client) ---
+        purchaseIntentForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!isAuthReady) {
+                showMessageBox('Aguarde', 'A aplicação está se conectando. Tente novamente em alguns segundos.');
+                return;
+            }
+
+            const formData = new FormData(purchaseIntentForm);
+            const data = Object.fromEntries(formData.entries());
+
+            data.timestamp = serverTimestamp();
+            data.userId = userId;
+
+            // Define the public collection path
+            const collectionPath = `artifacts/${appId}/public/data/purchase_intents`;
+
+            try {
+                await addDoc(collection(db, collectionPath), data);
+                showMessageBox('Sucesso!', 'Sua intenção de compra foi registrada com sucesso.');
+                purchaseIntentForm.reset();
+            } catch (e) {
+                console.error("Erro ao adicionar documento: ", e);
+                showMessageBox('Erro', 'Ocorreu um erro ao registrar sua intenção. Por favor, tente novamente.');
+            }
+        });
+
+        // --- Form Submission Logic (Admin/Comercializadora) ---
+        comercializadoraRegisterForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!isAuthReady) {
+                showMessageBox('Aguarde', 'A aplicação está se conectando. Tente novamente em alguns segundos.');
+                return;
+            }
+            // Check if the current user has admin role
+            if (userRole !== 'admin') {
+                showMessageBox('Acesso Negado', 'Somente administradores podem cadastrar comercializadoras.');
+                return;
+            }
+
+            const formData = new FormData(comercializadoraRegisterForm);
+            const data = Object.fromEntries(formData.entries());
+            data.timestamp = serverTimestamp();
+            data.registeredBy = userId;
+
+            const collectionPath = `artifacts/${appId}/public/data/comercializadoras`;
+
+            try {
+                // Use a unique ID for the document, e.g., the CNPJ
+                const docRef = doc(db, collectionPath, data['company-cnpj']);
+                await setDoc(docRef, data);
+                showMessageBox('Sucesso!', 'Comercializadora cadastrada com sucesso.');
+                comercializadoraRegisterForm.reset();
+            } catch (e) {
+                console.error("Erro ao cadastrar comercializadora: ", e);
+                showMessageBox('Erro', 'Ocorreu um erro ao cadastrar a comercializadora. Por favor, tente novamente.');
+            }
+        });
+
+        // --- Real-time Data Listener for Comercializadora View ---
+        function listenForIntents() {
+            if (!isAuthReady) {
+                console.warn("A autenticação não está pronta. Não é possível iniciar o listener do Firestore.");
+                return;
+            }
+            
+            // Define a collection that is shared with all users
+            const publicCollectionPath = `artifacts/${appId}/public/data/purchase_intents`;
+            const q = query(collection(db, publicCollectionPath));
+
+            onSnapshot(q, (querySnapshot) => {
+                const intents = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    intents.push({ id: doc.id, ...data });
+                });
+
+                renderIntents(intents);
+            }, (error) => {
+                console.error("Erro ao ouvir por intenções de compra:", error);
+            });
+        }
+
+        function renderIntents(intents) {
+            intentsList.innerHTML = '';
+            if (intents.length === 0) {
+                const message = document.createElement('p');
+                message.id = 'no-intents-message';
+                message.classList.add('text-center', 'text-gray-500');
+                message.textContent = 'Nenhuma intenção de compra registrada ainda.';
+                intentsList.appendChild(message);
+            } else {
+                intents.forEach(intent => {
+                    const card = document.createElement('div');
+                    card.classList.add('bg-gray-100', 'p-4', 'rounded-lg', 'border', 'border-gray-200');
+                    card.innerHTML = `
+                        <p class="font-bold text-lg text-gray-800">${intent.name}</p>
+                        <p class="text-sm text-gray-600">${intent.email} | ${intent.phone}</p>
+                        <p class="text-sm text-gray-500 mt-1">Valor da conta: R$ ${intent['bill-value'].replace('below-5000', 'Abaixo de 5.000').replace('5000-8000', '5.000 a 8.000').replace('above-8000', 'Acima de 8.000')}</p>
+                        <p class="text-xs text-gray-400 mt-2">ID do Cliente: ${intent.userId}</p>
+                    `;
+                    intentsList.appendChild(card);
+                });
+            }
+        }
+
+        // --- Message Box Functionality ---
+        closeMessageBox.addEventListener('click', function() {
+            messageBox.classList.add('hidden');
+        });
+
+        function showMessageBox(title, text) {
+            messageTitle.textContent = title;
+            messageText.textContent = text;
+            messageBox.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
